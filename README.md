@@ -1,7 +1,7 @@
-Java Messaging Service (JMS) River Plugin for ElasticSearch
+Oracle Advanced Queuing (AQ) River Plugin for ElasticSearch
 ===========================================================
 
-The JMS River provides a means of submitting bulk indexing requests to elasticsearch using a JMS queue. 
+The Oracle AQ River provides a means of submitting bulk indexing requests to elasticsearch using a database queue. 
 The format of the messages follows the elasticsearch bulk API format:
 
 	{ "index" : { "_index" : "twitter", "_type" : "tweet", "_id" : "1" } }
@@ -14,22 +14,16 @@ The river automatically batches queue messages.  It reads messages from the queu
 
 Installation
 ------------
-In order to install the plugin, simply run: 
-
-	bin/plugin -url http://bit.ly/10e749R -install elasticsearch-river-jms`
-
-Creating the JMS river in elasticsearch is as simple as:
+Creating the river in elasticsearch is as simple as:
 
 	curl -XPUT 'localhost:9200/_river/my_river/_meta' -d '{
-	    "type" : "jms",
-	    "jms" : {
-	        "jndiProviderUrl" : "t3://localhost:7001", 
-	        "jndiContextFactory" : "weblogic.jndi.WLInitialContextFactory",
+	    "type" : "aq",
+	    "aq" : {
+	        "jdbcUrl" : "jdbc:oracle:thin:@dbserver:1521:orcl", 
 	        "user" : "guest",
 	        "pass" : "guest",
-	        "connectionFactory" : "jms/ElasticSearchConnFactory",
 	        "sourceType" : "queue",
-	        "sourceName" : "jms/elasticsearch",
+	        "sourceName" : "jmstopic",
 	        "consumerName" : "elasticsearch",
 	        "durable" : true,
 	        "filter" : "JMSCorrelationID = 'someid'"
@@ -44,11 +38,9 @@ Creating the JMS river in elasticsearch is as simple as:
 Configuration Settings
 ----------------------
 
-- jndiProviderUrl: URL of the JNDI directory used to lookup the connection factory and queues/topics.
-- jndiContextFactory: The type of initial JNDI context factory.
+- jdbcUrl: JDBC URL to connect to the database where queue/topic resides.
 - user: The user name to be used for a secure JNDI connection.
 - pass: The password to be used for a secure JNDI connection.
-- connectionFactory: The JMS connection factory.
 - sourceType: Indicates whether the source is either a "queue" or "topic". 
 - sourceName: The queue or topic name.
 - consumerName: The name of the consumer or subscriber.
