@@ -1,0 +1,13 @@
+/data
+/activemq-data
+/work
+/logs
+/target
+/.settings
+*.class
+
+# Package Files #
+#*.jar
+*.war
+*.ear
+
