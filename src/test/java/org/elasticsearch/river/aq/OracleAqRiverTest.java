@@ -22,8 +22,8 @@ package org.elasticsearch.river.aq;
 import static org.elasticsearch.common.xcontent.XContentFactory.jsonBuilder;
 
 import java.io.IOException;
-import java.util.HashMap;
-import java.util.Map;
+import java.io.InputStream;
+import java.util.Properties;
 
 import javax.jms.JMSException;
 
@@ -41,6 +41,7 @@ import org.junit.Test;
  * @author Steve Sarandos
  */
 public class OracleAqRiverTest {
+	private static Properties props;
 
     final String message = "{ \"index\" : { \"_index\" : \"test\", \"_type\" : \"type1\", \"_id\" : \"1\" }\n" +
             "{ \"type1\" : { \"field1\" : \"value1\" } }\n" +
@@ -48,11 +49,34 @@ public class OracleAqRiverTest {
             "{ \"create\" : { \"_index\" : \"test\", \"_type\" : \"type1\", \"_id\" : \"1\" }\n" +
             "{ \"type1\" : { \"field1\" : \"value1\" } }";
 
-    OracleAqSender sender;
+    OracleAqClient sender;
     Client client;
+    
+    static {
+    	props = new Properties();
+        InputStream in = OracleAqRiverTest.class.getResourceAsStream("test.properties");
+        
+        try { 
+        	props.load(in);            
+        	props.setProperty("pass", props.getProperty("password"));
+        } 
+        catch (Exception e) { 
+        	Assert.fail("Failed to load properties: " + e.getMessage());
+        } 
+        finally {
+        	try {
+				in.close();
+			} 
+        	catch (IOException e) {
+				e.printStackTrace();
+			}
+        }
+    }
+
 
     private void startAQSender() throws Exception {
-        sender = new OracleAqSender("topic", "JMSTOPIC", "jdbc:oracle:thin:@192.168.56.101:1521:orcl", "jmsuser", "jmsuser");
+        sender = new OracleAqClient(props);
+        sender.setupTopic();
     }
 
     private void stopAQSender() throws Exception {
@@ -62,19 +86,13 @@ public class OracleAqRiverTest {
     private void startElasticSearchInstance() throws IOException {
         Node node = NodeBuilder.nodeBuilder().settings(
           	ImmutableSettings.settingsBuilder().put("gateway.type", "none")).node();
-        Map<String, String> settings = new HashMap<String, String>();
-        settings.put("jdbcUrl", "jdbc:oracle:thin:@192.168.56.101:1521:orcl");
-        settings.put("user", "jmsuser");
-        settings.put("pass", "jmsuser");
-        settings.put("sourceType", "topic");
-        settings.put("sourceName", "JMSTOPIC");
 
         client = node.client();
         client.prepareIndex("_river", "test1", "_meta").setSource(
         		jsonBuilder()
         			.startObject()
         				.field("type", "aq")
-        				.field("aq", settings)
+        				.field("aq", props)
         			.endObject()
         		).execute().actionGet();
     }
@@ -85,7 +103,6 @@ public class OracleAqRiverTest {
         client.close();
     }
 
-
     @Test
     public void testSimpleScenario() throws Exception {
         startAQSender();
@@ -93,13 +110,16 @@ public class OracleAqRiverTest {
 
         // assure that the index is not yet there
         try {
-            ListenableActionFuture<GetResponse> future = client.prepareGet("test", "type1", "1").execute();
+            ListenableActionFuture<GetResponse> future = 
+            		client.prepareGet("test", "type1", "1").execute();
             future.actionGet();
             Assert.fail();
         } 
         catch (IndexMissingException idxExcp) {
 
         }
+
+        Thread.sleep(3000l);
 
         try {
             sender.send(message);
@@ -112,12 +132,11 @@ public class OracleAqRiverTest {
         Thread.sleep(3000l);
 
         {
-            ListenableActionFuture<GetResponse> future = client.prepareGet("test", "type1", "1").execute();
+            ListenableActionFuture<GetResponse> future = 
+            		client.prepareGet("test", "type1", "1").execute();
             Object o = future.actionGet();
             GetResponse resp = (GetResponse) o;
             Assert.assertEquals("{ \"type1\" : { \"field1\" : \"value1\" } }", resp.getSourceAsString());
-//            System.out.println("resp.sourceAsString() = " + resp.sourceAsString());
-//            System.out.println("o = " + o);
         }
 
 
