@@ -1,7 +1,8 @@
 Oracle Advanced Queuing (AQ) River Plugin for ElasticSearch
 ===========================================================
 
-The Oracle AQ River provides a means of submitting bulk indexing requests to elasticsearch using a database queue. 
+The Oracle AQ River provides a means of submitting bulk indexing requests to elasticsearch using an Oracle database queue.  Using this river, there is no need to configure a separate JMS queue in an application server that wraps the database queue.  This river uses the Oracle AQ JMS API to directly connect to the database and queue through JDBC.
+
 The format of the messages follows the elasticsearch bulk API format:
 
 	{ "index" : { "_index" : "twitter", "_type" : "tweet", "_id" : "1" } }
