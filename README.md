@@ -23,7 +23,7 @@ Creating the river in elasticsearch is as simple as:
 	        "jdbcUrl" : "jdbc:oracle:thin:@dbserver:1521:orcl", 
 	        "user" : "guest",
 	        "pass" : "guest",
-	        "sourceType" : "queue",
+	        "sourceType" : "topic",
 	        "sourceName" : "jmstopic",
 	        "consumerName" : "elasticsearch",
 	        "durable" : true,
